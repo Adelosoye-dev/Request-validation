@@ -9,8 +9,17 @@ def validate_email(email):
     return re.match(pattern, email)
 
 def validate_phone(phone):
-    pattern = r'^\+?[0-9]{7,15}$'
+    pattern = r'^\+?[0-9]{7,11}$'
     return re.match(pattern, phone)
+
+def validateEmail(email):
+    from django.core.validators import validate_email
+    from django.core.exceptions import ValidationError
+    try:
+        validate_email(email)
+        return True
+    except ValidationError:
+        return False
 
 @csrf_exempt
 def get_message(request):
@@ -34,7 +43,7 @@ def person_endpoint(request):
                 elif not isinstance(data[field], field_type):
                     errors.append(f"{field} should be of type {field_type.__name__}")
 
-            if 'email' in data and not validate_email(data['email']):
+            if 'email' in data and not validateEmail(data['email']):
                 errors.append("Invalid email format")
             
             if 'phone' in data and not validate_phone(data['phone']):
@@ -73,11 +82,14 @@ def person_modify(request):
             extra_fields = ['age', 'address', 'nationality', 'occupation']
             data = json.loads(request.body)
             errors = []
-
+            
             for field in extra_fields:
                 if field in person:
                     errors.append(f"{field} already exists and cannot be added")
-
+            for item in data:
+                if item not in extra_fields:
+                    extra_fields_string = ', '.join(extra_fields)
+                    errors.append(f"{item} should be either, {extra_fields_string}")
             if errors:
                 return JsonResponse({"status": "error", "message": "Validation errors", "data": errors}, status=422)
             
