@@ -3,6 +3,9 @@ import re
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from .models import Person
+from django.core.exceptions import ValidationError
+
 
 def validate_email(email):
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
@@ -26,6 +29,12 @@ def get_message(request):
     if request.method == 'GET':
         return JsonResponse({"status": "success", "message": "Hello, world!", "data": None}, status=200)
     return JsonResponse({"status": "error", "message": "Method not allowed", "data": None}, status=405)
+
+@csrf_exempt
+def persons(request):
+    if request.method == 'GET':
+        persons = list(Person.objects.values())
+        return JsonResponse({"status": "success", "message": "Persons retrieved", "data": persons}, status=200)
 
 @csrf_exempt
 def person_endpoint(request):
