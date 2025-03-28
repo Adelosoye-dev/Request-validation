@@ -37,6 +37,30 @@ def persons(request):
         return JsonResponse({"status": "success", "message": "Persons retrieved", "data": persons}, status=200)
 
 @csrf_exempt
+def person_detail(request, pk):
+    try:
+        person = Person.objects.get(pk=pk)
+    except Person.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "Person not found", "data": None}, status=404)   
+    if request.method == 'GET':
+        return JsonResponse({"status": "success", "message": "Person retrieved", "data": person}, status=200)
+    elif request.method == 'DELETE':
+        person.delete()
+        return JsonResponse({"status": "success", "message": "Person deleted successfully", "data": None}, status=200)
+    elif request.method == 'PUT':
+        try:
+            data = json.loads(request.body)
+            person.first_name = data['first_name']
+            person.last_name = data['last_name']
+            person.email = data['email']
+            person.phone = data['phone']
+            person.gender = data['gender']
+            person.save()
+            return JsonResponse({"status": "success", "message": "Person updated successfully", "data": person}, status=200)
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e), "data": None}, status=400)
+        
+@csrf_exempt
 def person_endpoint(request):
     if request.method == 'POST':
         try:

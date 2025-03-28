@@ -1,9 +1,10 @@
 from django.urls import path
-from .views import get_message, person_endpoint, person_modify,persons
+from .views import get_message, person_endpoint, person_modify,persons,person_detail
 
 urlpatterns = [
     path('message/', get_message, name="message"),                
     path('person', person_endpoint, name="person_endpoint"), 
     path('person/modify', person_modify, name="person_modify"),
-    path('persons', persons, name="persons") 
+    path('persons', persons, name="persons"), 
+    path('persons/<int:pk>', person_detail, name="person_detail") 
 ]
