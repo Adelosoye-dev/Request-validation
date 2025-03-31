@@ -5,7 +5,8 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from .models import Person
 from django.core.exceptions import ValidationError
-
+from django.forms.models import model_to_dict
+from myAPI.models import Person
 
 def validate_email(email):
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
@@ -35,7 +36,26 @@ def persons(request):
     if request.method == 'GET':
         persons = list(Person.objects.values())
         return JsonResponse({"status": "success", "message": "Persons retrieved", "data": persons}, status=200)
-
+   
+    elif request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            
+            if Person.objects.filter(email=data['email']).exists():
+                return JsonResponse({"status": "error", "message": "Email already exists", "data": None}, status=400)
+            if not validate_email(data['email']):
+                return JsonResponse({"status": "error", "message": "Invalid email format", "data": None}, status=400)
+            if Person.objects.filter(phone=data['phone']).exists():
+                return JsonResponse({"status": "error", "message": "Phone number already exists", "data": None}, status=400)
+            
+            person = Person(email=data['email'], first_name=data['first_name'], last_name=data['last_name'], phone=data['phone'], gender=data['gender']
+            )
+            person.save()
+            return JsonResponse({"status": "success", "message": "Person created successfully", "data": model_to_dict(person)}, status=200)
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e), "data": None}, status=400)
+    
+        
 @csrf_exempt
 def person_detail(request, pk):
     try:
@@ -43,7 +63,9 @@ def person_detail(request, pk):
     except Person.DoesNotExist:
         return JsonResponse({"status": "error", "message": "Person not found", "data": None}, status=404)   
     if request.method == 'GET':
-        return JsonResponse({"status": "success", "message": "Person retrieved", "data": person}, status=200)
+        # return JsonResponse({"status": "success", "message": "Person retrieved", "data": person}, status=200)
+        return JsonResponse({
+                "status": "success", "message": "Person updated successfully", "data": model_to_dict(person)}, status=200)
     elif request.method == 'DELETE':
         person.delete()
         return JsonResponse({"status": "success", "message": "Person deleted successfully", "data": None}, status=200)
@@ -56,7 +78,8 @@ def person_detail(request, pk):
             person.phone = data['phone']
             person.gender = data['gender']
             person.save()
-            return JsonResponse({"status": "success", "message": "Person updated successfully", "data": person}, status=200)
+            # return JsonResponse({"status": "success", "message": "Person updated successfully", "data": person}, status=200)
+            return JsonResponse({"status": "success", "message": "Person updated successfully", "data": model_to_dict(person)}, status=200)
         except Exception as e:
             return JsonResponse({"status": "error", "message": str(e), "data": None}, status=400)
         
