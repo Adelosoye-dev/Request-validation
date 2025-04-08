@@ -3,7 +3,7 @@ import re
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from .models import Person
+from .models import Person, Portfolio
 from django.core.exceptions import ValidationError
 from django.forms.models import model_to_dict
 from myAPI.models import Person
@@ -82,7 +82,96 @@ def person_detail(request, pk):
             return JsonResponse({"status": "success", "message": "Person updated successfully", "data": model_to_dict(person)}, status=200)
         except Exception as e:
             return JsonResponse({"status": "error", "message": str(e), "data": None}, status=400)
+
+@csrf_exempt
+def create_portfolio(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            person_id = data.get("person_id")
+            person = Person.objects.get(pk=person_id)
+
+            if hasattr(person, 'portfolio'):
+                return JsonResponse({
+                    "status": "error",
+                    "message": "Portfolio already exists for this person.",
+                    "data": None
+                }, status=400)
+
+            portfolio = Portfolio.objects.create(
+                person=person,
+                position=data['position'],
+                profession=data['profession'],
+                years_of_experience=data['years_of_experience'],
+                sector=data['sector'],
+                skills=data['skills'] 
+            )
+
+            return JsonResponse({
+                "status": "success",
+                "message": "Portfolio created successfully",
+                "data": model_to_dict(portfolio)
+            }, status=201)
+
+        except Person.DoesNotExist:
+            return JsonResponse({
+                "status": "error",
+                "message": "Person not found.",
+                "data": None
+            }, status=404)
+
+        except Exception as e:
+            return JsonResponse({
+                "status": "error",
+                "message": str(e),
+                "data": None
+            }, status=400)
         
+@csrf_exempt
+def all_portfolios(request):
+    if request.method == 'GET':
+        portfolios = Portfolio.objects.all()
+        portfolio_list = [model_to_dict(p) for p in portfolios]
+        return JsonResponse({
+            "status": "success",
+            "message": "All portfolios retrieved",
+            "data": portfolio_list
+        }, status=200)
+
+@csrf_exempt
+def person_portfolio_detail(request, pk):
+    if request.method == 'GET':
+        try:
+            portfolio = Portfolio.objects.get(person_id=pk)
+            return JsonResponse({
+                "status": "success",
+                "message": "Portfolio retrieved successfully",
+                "data": model_to_dict(portfolio)
+            }, status=200)
+        except Portfolio.DoesNotExist:
+            return JsonResponse({
+                "status": "error",
+                "message": "Portfolio not found.",
+                "data": None
+            }, status=404)
+    elif request.method == 'DELETE':
+        portfolio.delete()
+        return JsonResponse({"status": "success", "message": "Portfolio deleted successfully", "data": None}, status=200)
+    elif request.method == 'PUT':
+        try:
+            data = json.loads(request.body)
+            portfolio.position = data['position']
+            portfolio.profession = data['profession']
+            portfolio.years_of_experience = data['years_of_experience']
+            portfolio.sector = data['sector']
+            portfolio.skills = data['skills']
+            portfolio.save()
+   
+            return JsonResponse({"status": "success", "message": "Portfolio updated successfully", "data": model_to_dict(portfolio)}, status=200)
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e), "data": None}, status=400)
+
+
 @csrf_exempt
 def person_endpoint(request):
     if request.method == 'POST':
