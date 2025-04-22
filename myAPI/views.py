@@ -63,9 +63,15 @@ def person_detail(request, pk):
     except Person.DoesNotExist:
         return JsonResponse({"status": "error", "message": "Person not found", "data": None}, status=404)   
     if request.method == 'GET':
-        # return JsonResponse({"status": "success", "message": "Person retrieved", "data": person}, status=200)
+        try:
+          portfolio = Portfolio.objects.get(person_id=pk)
+          portfolio_data = model_to_dict(portfolio)
+        except Portfolio.DoesNotExist:
+          portfolio_data = None
+        person_data = model_to_dict(person)
+        person_data['portfolio'] = portfolio_data
         return JsonResponse({
-                "status": "success", "message": "Person updated successfully", "data": model_to_dict(person)}, status=200)
+                    "status": "success", "message": "Person retrieved successfully", "data": person_data}, status=200)
     elif request.method == 'DELETE':
         person.delete()
         return JsonResponse({"status": "success", "message": "Person deleted successfully", "data": None}, status=200)
@@ -217,52 +223,48 @@ def person_endpoint(request):
     return JsonResponse({"status": "error", "message": "Invalid HTTP method", "data": None}, status=405)
 
 @csrf_exempt
-def person_modify(request):
+def person_modify(request, pk):
     if request.method == 'PATCH':
         try:
-            person = request.session.get('person')
-            if not person:
-                return JsonResponse({"status": "error", "message": "Person not found", "data": None}, status=404)
-
-            extra_fields = ['age', 'address', 'nationality', 'occupation']
+            person = Person.objects.get(pk=pk)
             data = json.loads(request.body)
+            allowed_fields = ['age', 'address', 'nationality', 'occupation']
             errors = []
-            
-            for field in extra_fields:
-                if field in person:
-                    errors.append(f"{field} already exists and cannot be added")
-            for item in data:
-                if item not in extra_fields:
-                    extra_fields_string = ', '.join(extra_fields)
-                    errors.append(f"{item} should be either, {extra_fields_string}")
+
+            for key in data:
+                if key not in allowed_fields:
+                    errors.append(f"{key} is not a valid field. Allowed fields: {', '.join(allowed_fields)}")
+
             if errors:
                 return JsonResponse({"status": "error", "message": "Validation errors", "data": errors}, status=422)
-            
-            person.update({key: data[key] for key in extra_fields if key in data})
-            request.session['person'] = person
-            return JsonResponse({"status": "success", "message": "Person details updated successfully", "data": person}, status=200)
+
+            for key in allowed_fields:
+                if key in data:
+                    setattr(person, 'meta', dict(person.meta, **{key: data[key]}))
+                    
+
+            person.save()
+            return JsonResponse({"status": "success", "message": "Person details updated successfully", "data": model_to_dict(person)}, status=200)
+        except Person.DoesNotExist:
+            return JsonResponse({"status": "error", "message": "Person not found", "data": None}, status=404)
         except Exception as e:
             return JsonResponse({"status": "error", "message": str(e), "data": None}, status=400)
 
+           
     elif request.method == 'PUT':
         try:
-            person = request.session.get('person')
-            if not person:
-                return JsonResponse({"status": "error", "message": "Person not found", "data": None}, status=404)
-
+            person = Person.objects.get(pk=pk)
             data = json.loads(request.body)
-            errors = []
-            for key, value in data.items():
-                if key in person and not isinstance(value, type(person[key])):
-                    errors.append(f"{key} should be of type {type(person[key]).__name__}")
-            
-            if errors:
-                return JsonResponse({"status": "error", "message": "Validation errors", "data": errors}, status=422)
-            
-            person.update(data)
-            request.session['person'] = person
-            return JsonResponse({"status": "success", "message": "Person details modified successfully", "data": person}, status=200)
+            person.first_name = data['first_name']
+            person.last_name = data['last_name']
+            person.email = data['email']
+            person.phone = data['phone']
+            person.gender = data['gender']
+            person.save()
+            return JsonResponse({"status": "success", "message": "Person updated successfully", "data": model_to_dict(person)}, status=200)
+        except Person.DoesNotExist:
+            return JsonResponse({"status": "error", "message": "Person not found", "data": None}, status=404)
         except Exception as e:
             return JsonResponse({"status": "error", "message": str(e), "data": None}, status=400)
-    
     return JsonResponse({"status": "error", "message": "Invalid HTTP method", "data": None}, status=405)
+
