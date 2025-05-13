@@ -1,5 +1,6 @@
 from django.db import models
-
+import hashlib
+import secrets
 
 class User(models.Model):
     first_name = models.CharField(max_length=50)
@@ -14,6 +15,17 @@ class User(models.Model):
     
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
+
+    def set_password(self, raw_password):
+        salt = secrets.token_hex(8)
+        hash_object = hashlib.md5((salt + raw_password).encode())
+        hashed_pw = hash_object.hexdigest()
+        self.password = f'{salt}${hashed_pw}'
+
+    def check_password(self, raw_password):
+        salt, hashed_pw = self.password.split('$')
+        hash_object = hashlib.md5((salt + raw_password).encode())
+        return hashed_pw == hash_object.hexdigest()
     
 class Conversation(models.Model):
     message = models.TextField()
