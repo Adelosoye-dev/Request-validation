@@ -27,6 +27,7 @@ class User(models.Model):
         hash_object = hashlib.md5((salt + raw_password).encode())
         return hashed_pw == hash_object.hexdigest()
     
+  
 class Conversation(models.Model):
     message = models.TextField()
     image = models.TextField(null=True, blank=True)

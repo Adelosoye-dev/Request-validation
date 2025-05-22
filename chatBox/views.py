@@ -4,6 +4,11 @@ from django.views.decorators.csrf import csrf_exempt
 from .models import User
 import json
 import re
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.authtoken.models import Token
+from django.contrib.auth import authenticate
+from rest_framework.permissions import AllowAny
 
 def validate_email(email):
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
@@ -81,25 +86,41 @@ def register(request):
        
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
-@csrf_exempt
-def login(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            username = data.get('username')
-            password = data.get('password')
-            
-            if not all([username, password]):
-                return JsonResponse({'error': 'All fields are required'}, status=422)
-            
-            user = User.objects.filter(username=username).first()
-            if user and user.check_password(password):
-                # Log in user to session
-                return JsonResponse({'message': 'Login successful!'})
-            else:
-                return JsonResponse({'error': 'Invalid username or password'}, status=400)
 
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+class UserLoginView(APIView):
+    permission_classes = (AllowAny,)
+    def post(self, request):
+        return JsonResponse({'error': 'All fields are required'}, status=422)
+        return Response({token: 'dfsdfds'})
+        user = authenticate(username=request.data['email'], password=request.data['password'])
+        return "Seen"
+        if user:
+            token, created = Token.objects.get_or_create(user=user)
+            return Response({'token': token.key})
+        else:
+            return Response({'error': 'Invalid credentials'}, status=401)
+
+# @csrf_exempt
+# def login(request):
+    # if request.method == 'POST':
+    #     try:
+    #         data = json.loads(request.body)
+    #         username = data.get('username')
+    #         password = data.get('password')
+            
+    #         if not all([username, password]):
+    #             return JsonResponse({'error': 'All fields are required'}, status=422)
+            
+    #         user = User.objects.filter(username=username).first()
+    #         if user and user.check_password(password):
+    #             # Log in user to session
+    #             # jwt_token = user.generate_jwt_token()
+            
+    #             return JsonResponse({'message': 'Login successful!'})
+    #         else:
+    #             return JsonResponse({'error': 'Invalid username or password'}, status=400)
+
+    #     except json.JSONDecodeError:
+    #         return JsonResponse({'error': 'Invalid JSON'}, status=400)
     
-    return JsonResponse({'error': 'Invalid request method'}, status=400)
+    # return JsonResponse({'error': 'Invalid request method'}, status=400)
