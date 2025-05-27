@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
+import os
 from pathlib import Path
 from datetime import timedelta
 
@@ -32,17 +33,17 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
-    "myAPI.apps.MyapiConfig",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "chatBox.apps.ChatboxConfig",
-    'rest_framework_simplejwt',
+    # 'rest_framework_simplejwt',
     'rest_framework',
     'corsheaders',
+    "myAPI.apps.MyapiConfig",
+    "chatBox",
 ]
 
 REST_FRAMEWORK = {
@@ -71,6 +72,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -78,6 +80,7 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'firstBackend.urls'
+AUTH_USER_MODEL = 'chatBox.User'
 
 TEMPLATES = [
     {
@@ -153,8 +156,14 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+CORS_ALLOW_ALL_ORIGINS = True
+
+APPEND_SLASH=False
