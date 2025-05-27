@@ -31,6 +31,7 @@ class User(AbstractUser):
     username = models.CharField(max_length=50, unique=True)
     bio = models.TextField(null=True, blank=True)
     profile_image = models.TextField(null=True, blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
 
     objects = CustomUserManager()
 
