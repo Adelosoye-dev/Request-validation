@@ -1,31 +1,44 @@
 from django.db import models
-import hashlib
-import secrets
+from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.base_user import BaseUserManager
+from django.utils.translation import gettext_lazy as _
+import json
 
-class User(models.Model):
-    first_name = models.CharField(max_length=50)
-    last_name = models.CharField(max_length=50)
-    email = models.EmailField(unique=True)
+class CustomUserManager(BaseUserManager):
+    def create_user(self, email, password, **extra_fields):
+        if not email:
+            raise ValueError(_('The Email must be set'))
+        email = self.normalize_email(email)
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save()
+        return user
+
+    def create_superuser(self, email, password, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        extra_fields.setdefault('is_active', True)
+
+        if extra_fields.get('is_staff') is not True:
+            raise ValueError(_('Superuser must have is_staff=True.'))
+        if extra_fields.get('is_superuser') is not True:
+            raise ValueError(_('Superuser must have is_superuser=True.'))
+        return self.create_user(email, password, **extra_fields)
+
+class User(AbstractUser):
+    email = models.EmailField(_('email address'), unique=True)
     phone = models.CharField(max_length=15, unique=True)
     username = models.CharField(max_length=50, unique=True)
-    password = models.CharField(max_length=50)
-    timestamp = models.DateTimeField(auto_now_add=True)
     bio = models.TextField(null=True, blank=True)
     profile_image = models.TextField(null=True, blank=True)
+
+    objects = CustomUserManager()
+
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['username', 'phone', 'first_name', 'last_name']
     
     def __str__(self):
-        return f"{self.first_name} {self.last_name}"
-
-    def set_password(self, raw_password):
-        salt = secrets.token_hex(8)
-        hash_object = hashlib.md5((salt + raw_password).encode())
-        hashed_pw = hash_object.hexdigest()
-        self.password = f'{salt}${hashed_pw}'
-
-    def check_password(self, raw_password):
-        salt, hashed_pw = self.password.split('$')
-        hash_object = hashlib.md5((salt + raw_password).encode())
-        return hashed_pw == hash_object.hexdigest()
+        return self.email
     
   
 class Conversation(models.Model):
@@ -35,8 +48,11 @@ class Conversation(models.Model):
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
     receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_messages')
 
+    class Meta:
+        ordering = ['-timestamp']
+
     def __str__(self):
-        return f"Conversation by {self.user.username} at {self.timestamp}"
+        return f"Message from {self.sender.username} to {self.receiver.username} at {self.timestamp}"
     
 class Post(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='posts')
@@ -46,8 +62,11 @@ class Post(models.Model):
     image = models.TextField(null=True, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        ordering = ['-timestamp']
+
     def __str__(self):
-        return f"Post by {self.user.username} at {self.timestamp}"
+        return f"{self.user.username}'s post at {self.timestamp}"
     
 class Like(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -55,6 +74,7 @@ class Like(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
     class Meta:
         unique_together = ('user', 'post')
+        ordering = ['-timestamp']
 
     def __str__(self):
-        return f"Like by {self.user.username} on post {self.post.id} at {self.timestamp}"
+        return f"{self.user.username} likes {self.post}"
